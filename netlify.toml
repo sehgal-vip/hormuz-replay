@@ -1,0 +1,20 @@
+# Netlify hosting for the replay. No build step: app/ is published as is.
+# Chat: netlify/functions/ask.mjs at /api/ask, using OPENROUTER_API_KEY from Netlify's environment.
+# Deploy with scripts/deploy_netlify.sh (it sets the key from .env and deploys).
+[build]
+  publish = "app"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+# Data files change only on redeploy: let browsers cache them for a day to save bandwidth credits.
+[[headers]]
+  for = "/data/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/vendor/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"

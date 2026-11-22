@@ -1,5 +1,21 @@
 # What the Hormuz Demo script
 
+## Elevator pitch (about 1 minute)
+
+For when there's no screen, or before the demo starts.
+
+"On the 9th of March 2026, the US President said the Strait of Hormuz was open. That day, two ships crossed. Before the war, it was about a hundred.
+
+A fifth of the world's oil moves through that strait. Insurers, shipping desks and analysts had to act on claims like that one, every day, for three weeks. The evidence to check them was public the whole time: flight archives, ship tracking, radar and optical satellites.
+
+In the fog of war, data exists, opinions exist, insights do not.
+
+So we built a replay of the crisis. Three weeks on one hourly clock, with news, flights, ships and satellites moving together. Nothing appears before the hour it existed. Plain code does the counting and every one of 27 claims gets a grade against the data, from corroborated to contradicted. And a model running on this laptop answers questions from that evidence only, so nothing leaves the machine.
+
+It cost nothing to run. Change the map and the dates, and it works for any crisis with public data."
+
+---
+
 **Runtime:** about 2 minutes 30 seconds. Optional inserts add a minute.
 **Reading it:** lines in quotes are spoken. Lines in square brackets are what you do on screen. Times are a guide, not a stopwatch.
 **Before you start:** the app is open at 24 Feb, 00:00, full screen, Dispatch panel open, "Pause on claims" ticked, chat warmed up. Checklist, keys and fallbacks are in DEMO-NOTES.md.
