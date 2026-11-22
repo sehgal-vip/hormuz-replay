@@ -2,6 +2,18 @@
 
 A replay of the Strait of Hormuz crisis (24 Feb to 16 Mar 2026) on a one-hour clock. Flights, ship density, radar and optical ship detections, satellite passes, airspace and official incident reports appear only from the hour they existed. Each claim carries a grade (corroborated, consistent, reported only, contested, contradicted) and names its data file. Plain code counts and detects; the grades are set from that evidence, and a local model explains them and answers questions from the same evidence.
 
+## Pitch
+
+In the fog of war, data exists, opinions exist, insights do not.
+
+When the Strait of Hormuz closed, everyone had a story. The data to test those stories was public, but nobody joined it up in time.
+
+What the Hormuz replays the crisis hour by hour, 24 February to 16 March 2026. It grades 27 claims against flight, ship and satellite data, from corroborated to contradicted, and each grade shows its evidence. Nothing appears before the hour it existed.
+
+Plain code counts and detects. The AI doesn't grade; it explains grades and answers questions, on a local model, so nothing leaves the machine. All of the data is free.
+
+**Beyond Hormuz:** any contested, fast-moving event leaves traces in free global data. Change the map box and the dates, and the same tool grades claims about a port blockade, an airspace closure or a sanctions-evasion story. It's for newsrooms, insurers, traders and analysts who need to know what was actually known, and when.
+
 ## Run
 
 ```bash
