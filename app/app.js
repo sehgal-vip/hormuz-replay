@@ -2,6 +2,7 @@
 (async function () {
   // Load everything small in parallel; flights (the largest file) load in the background so the page never waits on it.
   let FL = {};
+  let flightsLoaded = () => {};
   const [B, SD, ST, AIR] = await Promise.all([
     fetch("data/bundle.json").then((r) => r.json()),
     fetch("data/ship_density.json").then((r) => (r.ok ? r.json() : { days: {} })).catch(() => ({ days: {} })),
@@ -10,7 +11,7 @@
   ]);
   fetch("data/flights.json").then((r) => r.json()).then((j) => {
     FL = j;
-    if (window.__replay) window.__replay.seek(window.__replay.tick);  // redraw with aircraft
+    flightsLoaded();  // drop tracks cached while the file was still loading, then redraw with aircraft
   }).catch(() => {});
   const SAT_SHOWN = ST.sats.filter((x) => x.validated);
   const NT = B.nTicks;
@@ -750,6 +751,7 @@
   // ---------- flights (deck.gl) ----------
   const ALT_EXAG = 5; // metres per metre of real altitude, so cruising aircraft lift visibly off the terrain
   const tripCache = new Map();
+  flightsLoaded = () => { tripCache.clear(); if (window.__replay) window.__replay.seek(window.__replay.tick); };
   // One continuous track per aircraft across the previous and current hour, joined by ICAO hex,
   // so aircraft do not vanish and reappear at each hour boundary.
   function tripsFor(t) {
