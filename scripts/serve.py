@@ -5,12 +5,19 @@
 """Serve the replay app on http://localhost:8770 (static files plus /api/ask)."""
 import http.server
 import json
+import os
 import pathlib
+import time
 import threading
 import urllib.parse
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 APP = ROOT / "app"
+
+
+# Extra hostnames allowed when the app is exposed through a tunnel, e.g. PUBLIC_HOSTS=abc.ngrok-free.app
+PUBLIC_HOSTS = {h.strip() for h in os.environ.get("PUBLIC_HOSTS", "").split(",") if h.strip()}
+ASK_LOG = {}
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -30,13 +37,26 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         """Refuse requests whose Host or Origin is not this machine (blocks DNS rebinding and
         cross-site POSTs from other web pages to the local chat endpoint)."""
         host = (self.headers.get("Host") or "").rsplit(":", 1)[0].strip("[]")
-        if host not in ("localhost", "127.0.0.1", "::1"):
+        local = ("localhost", "127.0.0.1", "::1")
+        if host not in local and host not in PUBLIC_HOSTS:
             return False
         origin = self.headers.get("Origin")
         if origin:
             o = urllib.parse.urlparse(origin)
-            if o.hostname not in ("localhost", "127.0.0.1", "::1") or o.port != self.server.server_address[1]:
-                return False
+            if o.hostname in local:
+                return o.port == self.server.server_address[1]
+            return o.hostname in PUBLIC_HOSTS and o.hostname == host
+        return True
+
+    def _rate_ok(self):
+        """At most 6 chat questions a minute per client when exposed through a tunnel."""
+        ip = self.headers.get("X-Forwarded-For", self.client_address[0]).split(",")[0].strip()
+        now = time.time()
+        hits = [t for t in ASK_LOG.get(ip, []) if now - t < 60]
+        if len(hits) >= 6:
+            ASK_LOG[ip] = hits
+            return False
+        ASK_LOG[ip] = hits + [now]
         return True
 
     def _json(self, status, payload):
@@ -77,6 +97,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 raise ValueError
         except ValueError:
             return self._json(400, {"error": "Bad request."})
+        if not self._rate_ok():
+            return self._json(429, {"error": "Too many questions. Wait a minute."})
         if not self._ask_lock.acquire(timeout=120):
             return self._json(429, {"error": "The agent is busy. Try again."})
         try:
