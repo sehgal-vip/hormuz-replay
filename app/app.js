@@ -943,7 +943,10 @@
   }
   // The launcher is a round icon floating at the bottom right of the map; the chat window opens above it.
   $("chatFab").innerHTML = `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.2 3.6c-.5.4-1.3.1-1.3-.6V16A2.5 2.5 0 0 1 4 13.5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8.5 8.2h7M8.5 11.2h4.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`;
-  $("chatFab").title = "Ask the evidence (local model)";
+  // The hosted copy (Netlify) answers through a hosted model, not the one on this machine: label it truthfully.
+  const chatModel = /\.netlify\.app$/.test(location.hostname) ? "hosted model" : "local model";
+  document.querySelector(".chat-head .tag").textContent = chatModel;
+  $("chatFab").title = `Ask the evidence (${chatModel})`;
   $("chatFab").setAttribute("aria-label", "Ask the evidence");
   const setTl = () => document.documentElement.style.setProperty("--tl", document.querySelector(".timeline").offsetHeight + "px");
   setTl(); window.addEventListener("resize", setTl);
