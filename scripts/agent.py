@@ -109,7 +109,22 @@ def pack(tick, beat_id):
     return static_pack() + "\n" + moment_pack(tick, beat_id)
 
 
+def pick_model():
+    """Use the configured model if LM Studio has it loaded; otherwise whichever chat model is loaded.
+    Loading a second large model can fail for lack of memory, so prefer what is already in memory."""
+    try:
+        base = URL.rsplit("/v1", 1)[0]
+        data = json.load(urllib.request.urlopen(base + "/api/v0/models", timeout=5)).get("data", [])
+        loaded = [m["id"] for m in data if m.get("state") == "loaded" and m.get("type") != "embeddings" and "embed" not in m["id"]]
+        if loaded and MODEL not in loaded:
+            return loaded[0]
+    except Exception:
+        pass
+    return MODEL
+
+
 def _post(payload, timeout=300):
+    payload["model"] = pick_model()
     req = urllib.request.Request(URL + "/chat/completions", data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"})
     return json.load(urllib.request.urlopen(req, timeout=timeout))
 
