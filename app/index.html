@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Who Closed the Strait</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" integrity="sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V" crossorigin="anonymous">
+<link href="style.css" rel="stylesheet">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <h1>Who closed the strait?</h1>
+    <p>Strait of Hormuz, 24 Feb to 16 Mar 2026. Every claim graded against flight, ship and satellite data.</p>
+  </div>
+  <div class="top-right">
+  <div class="controls">
+    <button id="prevBeat" type="button" title="Previous beat">⏮</button>
+    <button id="playBtn" type="button" title="Play / pause">▶</button>
+    <button id="nextBeat" type="button" title="Next beat">⏭</button>
+    <label>Speed
+      <select id="speed">
+        <option value="0.5">0.5×</option>
+        <option value="1" selected>1×</option>
+        <option value="2">2×</option>
+        <option value="4">4×</option>
+      </select>
+    </label>
+    <label class="chk"><input type="checkbox" id="pauseBeats" checked> Pause on claims</label>
+    <button id="helpBtn" type="button" title="Keyboard shortcuts (?)" class="help-btn">?</button>
+    <div class="help-pop" id="helpPop" hidden>
+      <div class="help-title">Keyboard</div>
+      <dl>
+        <dt>Space</dt><dd>Play or pause</dd>
+        <dt>[ and ]</dt><dd>Previous or next claim</dd>
+        <dt>← and →</dt><dd>Back or forward one hour</dd>
+        <dt>Shift + ← →</dt><dd>Back or forward one day</dd>
+        <dt>Esc</dt><dd>Close the Inspector or chat</dd>
+        <dt>?</dt><dd>Show or hide this list</dd>
+      </dl>
+      <div class="help-title">Map</div>
+      <dl>
+        <dt>Click</dt><dd>Pin an object's details</dd>
+        <dt>Right-drag</dt><dd>Tilt and rotate</dd>
+      </dl>
+    </div>
+  </div>
+  <div class="clock">
+    <div class="clock-time" id="clockTime">24 Feb, 00:00</div>
+    <div class="clock-meta"><span id="clockTick">tick 0 / 503</span> · UTC · <span id="sceneTitle"></span></div>
+  </div>
+  </div>
+</header>
+
+<main class="stage">
+  <section class="map-wrap">
+    <div id="map"></div>
+    <div class="hud" id="hud" aria-live="polite"></div>
+    <div class="view-bar" id="viewBar"></div>
+    <div class="grid-legend" id="gridLegend">
+      <div class="gl-title">Ships broadcasting (AIS), vessel-hours per cell per day</div>
+      <div class="gl-ramp"></div>
+      <div class="gl-ticks"><span>1</span><span>12</span><span>48</span><span>150</span><span>600+</span></div>
+      <div class="gl-land"><i></i><span id="gridLegendLand">cells on land</span></div>
+    </div>
+    <div class="readout" id="readout" aria-live="off"></div>
+    <div class="map-legend">
+      <span><i class="plane-ico">✈</i>Aircraft and flight path</span>
+      <span><i class="sq airclosed"></i>Airspace closed</span>
+      <span><i class="sq airadv"></i>Conflict-zone bulletin</span>
+      <span><i class="sq sat"></i>Satellite capture</span>
+      <span><i class="ring radar"></i>Radar ship</span>
+      <span><i class="sq optdark"></i>Optical ship, no AIS</span>
+      <span><i class="sq optais"></i>Optical ship, broadcasting</span>
+      <span><i class="dia incident"></i>Ship incident</span>
+      <span><i class="dot heat"></i>Heat detection</span>
+      <span><i class="dia ctx"></i>Context</span>
+    </div>
+    <div class="layer-toggles" id="layerToggles"></div>
+    <div class="map-caption" id="dailyCap"></div>
+  </section>
+
+  <aside class="side">
+    <section class="panel inspector" id="inspector" hidden>
+      <header class="panel-head insp-head"><span class="panel-title">Inspector</span><span class="panel-sub" id="inspSub"></span><button type="button" class="insp-close" id="inspClose" title="Close (Esc)">×</button></header>
+      <div class="panel-body" id="inspBody"></div>
+    </section>
+    <section class="panel" data-panel="dispatch">
+      <header class="panel-head"><span class="panel-title">Dispatch</span><span class="panel-sub" id="dispatchSub"></span><i class="chev"></i></header>
+      <div class="panel-body">
+        <article class="beat intro" id="introCard">
+          <div class="beat-head"><span class="lane-chip">Start here</span></div>
+          <p class="narrator">A replay of the Hormuz crisis, hour by hour, with every claim graded against the data.</p>
+          <ol class="intro-steps">
+            <li><b>Press play</b> (or Space). The clock stops at each claim; this panel shows the claim, the evidence and a grade.</li>
+            <li><b>Jump around:</b> click any dot on the timeline, or use the previous and next buttons.</li>
+            <li><b>Interrogate the map:</b> the line under the map reads out what is under the cursor; click any object for its details.</li>
+            <li><b>Ask a question</b> with the chat button at the bottom right of the map.</li>
+          </ol>
+          <div class="intro-grades">
+            <div><span class="grade corroborated"><b>Corroborated</b></span> independent data shows it</div>
+            <div><span class="grade consistent"><b>Consistent</b></span> data fits, cannot prove it</div>
+            <div><span class="grade reported"><b>Reported only</b></span> no data we hold can test it</div>
+            <div><span class="grade contested"><b>Contested</b></span> sources disagree</div>
+            <div><span class="grade contradicted"><b>Contradicted</b></span> data shows otherwise</div>
+          </div>
+        </article>
+        <article class="beat" id="beatCard">
+          <div class="beat-head">
+            <span class="lane-chip" id="beatLane">Claims</span>
+            <span class="precision" id="beatPrecision"></span>
+            <span class="beat-id" id="beatId"></span>
+          </div>
+          <p class="narrator" id="beatNarrator">Press play.</p>
+          <dl class="beat-body">
+            <dt>Claim</dt><dd id="beatClaim">—</dd>
+            <dt>Evidence</dt><dd id="beatEvidence">—</dd>
+          </dl>
+          <div class="grade" id="beatGrade"></div>
+          <button class="ask-btn" id="askBtn" type="button">Why do you say that?</button>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel" data-panel="air">
+      <header class="panel-head"><span class="panel-title">Airspace</span><span class="panel-sub">aircraft airborne this hour</span><i class="chev"></i></header>
+      <div class="panel-body">
+        <div class="stat">
+          <div class="stat-row"><span>Gulf states</span><b id="sGulf">–</b></div>
+          <div class="stat-row"><span>Interior Iran</span><b id="sIran">–</b></div>
+          <canvas class="spark" id="sparkAir"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" data-panel="ships">
+      <header class="panel-head"><span class="panel-title">Ships</span><span class="panel-sub">broadcasting this hour (AIS)</span><i class="chev"></i></header>
+      <div class="panel-body">
+        <div class="stat">
+          <div class="stat-row"><span>Strait box</span><b id="sHormuz">–</b></div>
+          <div class="stat-row"><span>Gulf of Oman</span><b id="sGoo">–</b></div>
+          <canvas class="spark" id="sparkShips"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" data-panel="crossings">
+      <header class="panel-head"><span class="panel-title">Crossings</span><span class="panel-sub">that day, by provider</span><i class="chev"></i></header>
+      <div class="panel-body">
+        <div class="stat">
+          <div class="stat-row"><span>IMF PortWatch</span><b id="sImf">–</b></div>
+          <div class="stat-row"><span>S&amp;P (via JMIC)</span><b id="sSp">–</b></div>
+          <div class="stat-row"><span>Windward</span><b id="sWw">–</b></div>
+          <canvas class="spark" id="sparkCross"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" data-panel="sats">
+      <header class="panel-head"><span class="panel-title">Satellites</span><span class="panel-sub">radar and optical, last pass</span><i class="chev"></i></header>
+      <div class="panel-body">
+        <div class="stat">
+          <div class="stat-label">Radar ships in strait box, per open-sea unit</div>
+          <div id="radarRows"></div>
+          <div class="stat-label" style="margin-top:10px">Optical ships, Gulf and Gulf of Oman</div>
+          <div id="opticalRow"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" data-panel="day">
+      <header class="panel-head"><span class="panel-title">That day</span><span class="panel-sub">date-only reports</span><i class="chev"></i></header>
+      <div class="panel-body">
+        <div class="stat"><ul class="dayband" id="dayBand"></ul></div>
+      </div>
+    </section>
+  </aside>
+
+  <div class="chat-dock">
+    <section class="chat" id="chatWin" hidden>
+      <header class="chat-head"><span>Ask the evidence</span><span class="tag">local model</span><button type="button" class="chat-close" id="chatClose" title="Close">×</button></header>
+      <div class="chat-log" id="chatLog"><p class="chat-hint">Ask anything about the crisis at the current moment, for example "Was the strait open on 9 March?" Answers use only the replay's data.</p></div>
+      <form class="chat-form" id="chatForm">
+        <input id="chatInput" type="text" placeholder="Ask a question…" autocomplete="off">
+        <button type="submit">Ask</button>
+      </form>
+    </section>
+    <button class="chat-fab" id="chatFab" type="button"><span class="fab-dot"></span>Ask the evidence</button>
+  </div>
+</main>
+
+<footer class="timeline">
+  <canvas id="lanes"></canvas>
+</footer>
+
+<div class="lane-tip" id="laneTip" hidden></div>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" integrity="sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/deck.gl@9.0.38/dist.min.js" integrity="sha384-tEG529toczQRv/bqd2PyHy5vTO49FMjQri0c1oB44gSkYiNouZz8L9yNTVx0YGl+" crossorigin="anonymous"></script>
+<script src="app.js"></script>
+</body>
+</html>

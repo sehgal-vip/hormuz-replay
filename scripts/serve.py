@@ -1,0 +1,122 @@
+# /// script
+# requires-python = ">=3.10"
+# dependencies = []
+# ///
+"""Serve the replay app on http://localhost:8770 (static files plus /api/ask)."""
+import http.server
+import json
+import pathlib
+import threading
+import urllib.parse
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+APP = ROOT / "app"
+
+
+class Handler(http.server.SimpleHTTPRequestHandler):
+    def __init__(self, *a, **kw):
+        super().__init__(*a, directory=str(APP), **kw)
+
+    MAX_BODY = 64 * 1024
+    _ask_lock = threading.Lock()  # one model call at a time: a flood cannot pile up requests
+
+    def end_headers(self):
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("X-Frame-Options", "DENY")
+        super().end_headers()
+
+    def _local(self):
+        """Refuse requests whose Host or Origin is not this machine (blocks DNS rebinding and
+        cross-site POSTs from other web pages to the local chat endpoint)."""
+        host = (self.headers.get("Host") or "").rsplit(":", 1)[0].strip("[]")
+        if host not in ("localhost", "127.0.0.1", "::1"):
+            return False
+        origin = self.headers.get("Origin")
+        if origin:
+            o = urllib.parse.urlparse(origin)
+            if o.hostname not in ("localhost", "127.0.0.1", "::1") or o.port != self.server.server_address[1]:
+                return False
+        return True
+
+    def _json(self, status, payload):
+        data = json.dumps(payload).encode()
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(data)
+
+    def do_GET(self):
+        if not self._local():
+            return self.send_error(403)
+        super().do_GET()
+
+    def do_HEAD(self):
+        if not self._local():
+            return self.send_error(403)
+        super().do_HEAD()
+
+    def do_POST(self):
+        if not self._local():
+            return self.send_error(403)
+        if self.path != "/api/ask":
+            return self.send_error(404)
+        if "json" not in (self.headers.get("Content-Type") or ""):
+            return self._json(415, {"error": "Send JSON."})
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            n = -1
+        if not 0 < n <= self.MAX_BODY:
+            return self._json(413, {"error": "Request too large or empty."})
+        try:
+            body = json.loads(self.rfile.read(n))
+            if not isinstance(body, dict):
+                raise ValueError
+        except ValueError:
+            return self._json(400, {"error": "Bad request."})
+        if not self._ask_lock.acquire(timeout=120):
+            return self._json(429, {"error": "The agent is busy. Try again."})
+        try:
+            import agent
+            self._json(200, {"answer": agent.answer(body)})
+        except ImportError:
+            self._json(503, {"error": "The agent is not available."})
+        except Exception as e:  # log detail here; the panel gets a short message only
+            print(f"agent error: {type(e).__name__}: {e}", flush=True)
+            self._json(500, {"error": "The agent could not answer. Is LM Studio running with the model loaded?"})
+        finally:
+            self._ask_lock.release()
+
+    def log_message(self, fmt, *args):
+        pass
+
+
+if __name__ == "__main__":
+    import sys
+    sys.path.insert(0, str(ROOT / "scripts"))
+    try:
+        server = http.server.ThreadingHTTPServer(("127.0.0.1", 8770), Handler)
+    except OSError:
+        print("Port 8770 is already in use: the app is probably already running. Open http://localhost:8770")
+        raise SystemExit(0)
+    def keep_warm():
+        # Load the local model and cache the evidence prefix now, then every 15 minutes,
+        # so a demo question is answered in seconds, not minutes (the model unloads after an idle hour).
+        import time
+        while True:
+            try:
+                import agent
+                t0 = time.time()
+                agent.warm()
+                print(f"chat model warm ({time.time() - t0:.1f} s)", flush=True)
+            except Exception as e:  # LM Studio not running or model not loaded: try again later
+                print(f"chat warm-up skipped: {e}", flush=True)
+            time.sleep(900)
+
+    import threading
+    threading.Thread(target=keep_warm, daemon=True).start()
+    print("Serving http://localhost:8770 (Ctrl+C to stop)")
+    server.serve_forever()

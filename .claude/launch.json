@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "hormuz-replay",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "-q", "scripts/serve.py"],
+      "port": 8770
+    }
+  ]
+}
