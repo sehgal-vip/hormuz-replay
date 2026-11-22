@@ -6,13 +6,13 @@ The spoken script is in DEMO.md. This file holds everything else.
 
 - Start: `uv run ~/hormuz-replay/scripts/serve.py`, then open http://localhost:8770.
 - After new data: `uv run ~/hormuz-replay/scripts/build_bundle.py` and reload. Airspace data: `uv run ~/hormuz-replay/scripts/build_airspace.py`.
-- Another local model: start the server with `LMSTUDIO_MODEL=qwen/qwen3.8-27b`.
+- Chat uses whichever chat model LM Studio has loaded (default `qwen/qwen3.8-27b`). To force another: start the server with `LMSTUDIO_MODEL=<model id>`.
 
 ## Before going on stage
 
 - [ ] Server running: http://localhost:8770 (preview "hormuz-replay").
-- [ ] LM Studio: `qwen/qwen3.6-35b-a3b` loaded. It unloads after an hour idle, so reload it within the hour before the slot.
-- [ ] **Chat is fast once warm** (about 3 seconds per answer). The server loads the model and caches the evidence at start and every 15 minutes; check the server log shows "chat model warm". Pre-asking the demo question is still a good safety net.
+- [ ] LM Studio: `qwen/qwen3.8-27b` loaded. The server pings it every 5 minutes, so it stays loaded while the server runs.
+- [ ] **Chat takes about 25 seconds per answer on this model** (measured; up to a minute when cold). The server loads the model and caches the evidence at start and every 5 minutes; check the server log shows "chat model warm". Pre-ask the demo question and keep talking while it answers.
 - [ ] Play the whole replay once on the presentation machine, so map tiles (imagery, terrain, NASA photo) are cached.
 - [ ] Browser full screen, at least 1440 px wide. Dispatch open; Crossings and "That day" may open by default on tall screens.
 - [ ] "Pause on claims" ticked, so the clock stops on each claim while you speak.

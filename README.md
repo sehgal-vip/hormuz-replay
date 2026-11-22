@@ -22,7 +22,7 @@ uv run scripts/serve.py
 
 Open http://localhost:8770. The built data the app needs is in `app/data/`, so nothing else is required.
 
-Chat needs [LM Studio](https://lmstudio.ai) with a model loaded (default `qwen/qwen3.6-35b-a3b`; override with `LMSTUDIO_MODEL`, `LMSTUDIO_URL`). Without it the replay works and chat shows an error. Nothing leaves the machine.
+Chat needs [LM Studio](https://lmstudio.ai) with a model loaded (it uses whichever chat model is loaded, default `qwen/qwen3.8-27b`; override with `LMSTUDIO_MODEL`, `LMSTUDIO_URL`). Without it the replay works and chat shows an error. Nothing leaves the machine.
 
 ## Rebuild the data
 
@@ -35,7 +35,8 @@ Raw downloads (about 350 MB) are not in the repo. Copy `.env.example` to `.env`,
 - `scripts/`: server, chat agent, fetchers and builders
 - `SPINE.md`, `DECISIONS.md`: story spine and decision register
 - `DEMO.md`, `DEMO-NOTES.md`: spoken demo script and backstage notes
-- `WRITEUP.md`: short write-up
+- `HOW-I-BUILT-IT.md`: the detailed build log (data sources, method, what went wrong)
+- `WRITEUP.md`: the early write-up, kept for the record; the plan changed after it
 
 ## Security notes
 

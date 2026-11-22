@@ -145,7 +145,7 @@ if __name__ == "__main__":
         print("Port 8770 is already in use: the app is probably already running. Open http://localhost:8770")
         raise SystemExit(0)
     def keep_warm():
-        # Load the local model and cache the evidence prefix now, then every 15 minutes,
+        # Load the local model and cache the evidence prefix now, then every 5 minutes,
         # so a demo question is answered in seconds, not minutes (the model unloads after an idle hour).
         import time
         while True:
@@ -156,7 +156,7 @@ if __name__ == "__main__":
                 print(f"chat model warm ({time.time() - t0:.1f} s)", flush=True)
             except Exception as e:  # LM Studio not running or model not loaded: try again later
                 print(f"chat warm-up skipped: {e}", flush=True)
-            time.sleep(900)
+            time.sleep(300)
 
     import threading
     threading.Thread(target=keep_warm, daemon=True).start()

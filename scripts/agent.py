@@ -6,18 +6,19 @@ that tick, plus the full graded beat list) and asks the local model to answer
 only from it. Nothing leaves the machine.
 
 Config (environment): LMSTUDIO_URL (default http://localhost:1234/v1),
-LMSTUDIO_MODEL (default qwen/qwen3.6-35b-a3b).
+LMSTUDIO_MODEL (default qwen/qwen3.8-27b).
 """
 import datetime as dt
 import json
 import os
 import pathlib
 import re
+import urllib.error
 import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 URL = os.environ.get("LMSTUDIO_URL", "http://localhost:1234/v1")
-MODEL = os.environ.get("LMSTUDIO_MODEL", "qwen/qwen3.6-35b-a3b")
+MODEL = os.environ.get("LMSTUDIO_MODEL", "qwen/qwen3.8-27b")
 _B = None
 _STATIC = None
 
@@ -125,8 +126,12 @@ def pick_model():
 
 def _post(payload, timeout=300):
     payload["model"] = pick_model()
-    req = urllib.request.Request(URL + "/chat/completions", data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"})
-    return json.load(urllib.request.urlopen(req, timeout=timeout))
+    try:
+        req = urllib.request.Request(URL + "/chat/completions", data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"})
+        return json.load(urllib.request.urlopen(req, timeout=timeout))
+    except urllib.error.HTTPError as e:  # keep LM Studio's own message: it says why (context full, model not loaded)
+        detail = e.read().decode("utf-8", "replace")[:400]
+        raise RuntimeError(f"LM Studio HTTP {e.code}: {detail}") from None
 
 
 def warm():
@@ -144,7 +149,11 @@ def answer(body):
         msgs = [{"role": "user", "content": "Why do you say that?"}]
     # Keep only well-formed turns, cap their number and length (the model sees nothing else from the client).
     msgs = [{"role": m["role"], "content": m["content"][:2000]} for m in msgs
-            if isinstance(m, dict) and m.get("role") in ("user", "assistant") and isinstance(m.get("content"), str)][-8:]
+            if isinstance(m, dict) and m.get("role") in ("user", "assistant") and isinstance(m.get("content"), str)][-6:]
+    # The trimmed history must open with a user turn: some chat templates (Qwen) reject one that opens
+    # with an assistant turn ("No user query found"), which made every question after the fourth fail.
+    while msgs and msgs[0]["role"] != "user":
+        msgs = msgs[1:]
     if not msgs:
         msgs = [{"role": "user", "content": "Why do you say that?"}]
     try:
@@ -160,7 +169,14 @@ def answer(body):
     }
     # Turn off Qwen's reasoning trace (LM Studio honours reasoning_effort "none"); keeps answers fast.
     payload["reasoning_effort"] = "none"
-    out = _post(payload)
+    try:
+        out = _post(payload)
+    except RuntimeError as e:
+        # Most often the conversation no longer fits the model's context window. Ask again with the
+        # evidence and the latest question only, so a long chat never ends in an error.
+        print(f"chat retry without history: {e}", flush=True)
+        payload["messages"] = [payload["messages"][0], msgs[-1]]
+        out = _post(payload)
     text = out["choices"][0]["message"].get("content") or ""
     text = re.sub(r"<think>.*?</think>", "", text, flags=re.S).strip()
     return text.replace("—", ", ")
