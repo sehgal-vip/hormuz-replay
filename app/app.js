@@ -33,7 +33,8 @@
   const srcName = (f) => { for (const [re, n] of SRC_NAMES) if (re.test(f)) return n; return f; };
   const md = (s) => esc(s).replace(/\s*\(`([^`]+)`\)/g, (m, f) => ` <span class="src-chip">${esc(srcName(f))}</span>`).replace(/`([^`]+)`(?:\s+(E\d+(?:\s+to\s+E\d+)?))?/g, (m, f) => `<span class="src-chip">${esc(srcName(f))}</span>`);
   // Long evidence reads as a list: one sentence per line.
-  const mdList = (s) => { const parts = String(s).split(/(?<=[.)])\s+(?=[A-Z])/).filter((x) => x.trim()); return parts.length > 1 && s.length > 150 ? `<ul class="ev-list">${parts.map((x) => `<li>${md(x)}</li>`).join("")}</ul>` : md(s); };
+  const mdTidy = (h) => h.replace(/(<\/span>)\s*\.(?=\s|$)/g, "$1");
+  const mdList = (s) => { const parts = String(s).split(/(?<=[.)])\s+(?=[A-Z])/).filter((x) => x.trim()); return parts.length > 1 && s.length > 150 ? `<ul class="ev-list">${parts.map((x) => `<li>${mdTidy(md(x))}</li>`).join("")}</ul>` : mdTidy(md(s)); };
 
   // ---------- state ----------
   let tick = 0, playing = false, acc = 0, holdUntil = 0, lastBeatShown = null, lastFrame = 0;
@@ -625,6 +626,7 @@
     for (const e of B.events) if (e.date === dk && e.dayOnly && !e.context) items.push(`${md(e.event)} <span class="src">(${esc(e.confidence)})</span>`);
     for (const i of B.incidents) if (i.date === dk && i.dayOnly) items.push(`${esc(i.vessel)}: ${esc(i.what)} <span class="src">(${esc(i.confidence)})</span>`);
     for (const g of B.gnss) if (g.date === dk && g.value) items.push(`GPS interference: ${esc(g.metric)} ${esc(g.value)} <span class="src">(${esc(g.provider)})</span>`);
+    $("dayCount").textContent = items.length || "";
     $("dayBand").innerHTML = items.length ? items.map((x) => `<li>${x}</li>`).join("") : `<li style="color:${MUTED}">Nothing date-only recorded for this day.</li>`;
 
     drawSpark("sparkAir", [fc_.gulf, fc_.iran], t);
@@ -655,17 +657,19 @@
   function currentBeat(t) { let b = null; for (const x of B.beats) if (x.tick <= t) b = x; return b; }
   function renderBeat(b) {
     $("introCard").hidden = !!b; $("beatCard").hidden = !b;
-    if (!b) { $("dispatchSub").textContent = "start here"; return; }
+    if (!b) return;
     $("beatLane").textContent = b.lane;
     $("beatPrecision").textContent = b.precision;
     $("beatId").textContent = `claim ${B.beats.indexOf(b) + 1} of ${B.beats.length}`;
     $("beatNarrator").textContent = b.narrator;
-    $("dispatchSub").textContent = `claim ${B.beats.indexOf(b) + 1} of ${B.beats.length} · ${b.gradeKey}`;
-    $("beatClaim").innerHTML = md(b.claim);
+    $("beatClaim").innerHTML = mdTidy(md(b.claim));
     $("beatEvidence").innerHTML = mdList(b.evidence);
     const g = $("beatGrade"); g.className = "grade " + (GRADE_CLASS[b.gradeKey] || "consistent");
-    const [head, ...rest] = b.grade.split(" (");
-    g.innerHTML = `<b>${esc(head)}</b>${rest.length ? " (" + esc(rest.join(" (")) : ""}`;
+    // "Corroborated (decline already under way)": the word is the badge, the qualifier sits beside it.
+    const m = b.grade.match(/^(Corroborated|Consistent|Reported only|Contested|Contradicted)\b[\s,:;]*(.*)$/i);
+    const head = m ? m[1] : b.grade, note = m ? m[2].replace(/^\((.*)\)$/, "$1") : "";
+    g.innerHTML = `<b>${esc(head)}</b>`;
+    $("beatGradeNote").textContent = note;
     lastBeatShown = b.id;
   }
 
@@ -690,7 +694,7 @@
     B.scenes.forEach((sc) => {
       const x0 = X(sc.start), x1 = X(sc.end + 1), cur = t >= sc.start && t <= sc.end;
       g.strokeStyle = cur ? GOLD : INK3; g.lineWidth = cur ? 2 : 1; g.beginPath(); g.moveTo(x0 + 1, top - 3); g.lineTo(x1 - 1, top - 3); g.stroke(); g.lineWidth = 1;
-      g.save(); g.beginPath(); g.rect(x0 + 2, 14, Math.max(0, x1 - x0 - 4), 14); g.clip();
+      g.save(); g.beginPath(); g.rect(x0 + 2, 14, Math.max(0, x1 - x0 - 14), 14); g.clip();
       if (x1 - x0 > 70) { g.fillStyle = cur ? "#f0c766" : MUTED; g.fillText(sc.title, x0 + 3, 15); } g.restore();
     });
     // lanes
@@ -814,12 +818,14 @@
   }
 
   // ---------- clock ----------
+  let moreCue = null;
   function render() {
     $("clockTime").textContent = fmtTick(tick);
     $("clockTick").textContent = `hour ${tick + 1} of ${NT}`;
     $("sceneTitle").textContent = sceneOf(tick).title;
     renderMap(tick); renderDaily(tick); renderAirspace(tick); renderShipGrid(tick); renderStats(tick); renderHud(tick); renderBeat(currentBeat(tick)); drawLanes(tick);
     updateFlights(tick, 0); updateSatellites(tick, 0);
+    if (typeof moreCue === "function") moreCue();
   }
   // ---------- camera ----------
   // Three fixed views; the camera moves only at a narrated beat that needs another view (about six moves in
@@ -934,23 +940,24 @@
   $("chatClose").onclick = () => openChat(false);
   window.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("chatWin").hidden) openChat(false); });
 
-  // Collapsible panels; open or closed state remembered per viewer
-  const PANEL_KEY = "hormuz-panels";
-  let panelState = {};
-  try { panelState = JSON.parse(localStorage.getItem(PANEL_KEY) || "{}"); } catch (e) { panelState = {}; }
-  document.querySelectorAll(".panel").forEach((el) => {
-    const id = el.dataset.panel;
-    if (!id) return;  // the Inspector is not collapsible: it opens on click and closes with Esc or ×
-    // Default: only Dispatch open (the map's instrument strip carries the headline numbers).
-    const openByDefault = id === "dispatch" || (window.innerHeight >= 860 && (id === "crossings" || id === "day"));
-    if (panelState[id] === false || (panelState[id] === undefined && !openByDefault)) el.classList.add("closed");
-    el.querySelector(".panel-head").addEventListener("click", () => {
-      el.classList.toggle("closed");
-      panelState[id] = !el.classList.contains("closed");
-      try { localStorage.setItem(PANEL_KEY, JSON.stringify(panelState)); } catch (e) {}
-      render();
-    });
-  });
+  // Sidebar tabs: one supporting pane at a time; the choice is remembered per viewer.
+  const TAB_KEY = "hormuz-tab";
+  function setTab(id) {
+    document.querySelectorAll(".tab").forEach((el) => { const on = el.dataset.tab === id; el.classList.toggle("on", on); el.setAttribute("aria-selected", on); });
+    document.querySelectorAll(".tab-pane").forEach((el) => (el.hidden = el.dataset.pane !== id));
+    $("tabBody").scrollTop = 0;
+    try { localStorage.setItem(TAB_KEY, id); } catch (e) {}
+    render();  // charts in a pane that was hidden have no size until now
+  }
+  document.querySelectorAll(".tab").forEach((el) => (el.onclick = () => setTab(el.dataset.tab)));
+  let tab0 = "day";
+  try { tab0 = localStorage.getItem(TAB_KEY) || "day"; } catch (e) {}
+  if (!document.querySelector(`.tab[data-tab="${tab0}"]`)) tab0 = "day";
+  // A shadow at the bottom edge of the pane shows when there is more to scroll.
+  const tabBody = $("tabBody");
+  moreCue = () => tabBody.parentElement.classList.toggle("more", tabBody.scrollHeight - tabBody.scrollTop - tabBody.clientHeight > 6);
+  tabBody.addEventListener("scroll", moreCue);
+  window.addEventListener("resize", moreCue);
 
   async function ask(question) {
     openChat(true);
@@ -987,6 +994,7 @@
     if (e.key === "?") toggleHelp(); else if (e.key === "Escape") toggleHelp(false);
   });
 
+  setTab(tab0);
   window.__replay = { seek, get tick() { return tick; }, B, map, deckOverlay, satAt: (t, f) => updateSatellites(t, f) };
   render();
   requestAnimationFrame((n) => { lastFrame = n; frame(n); });

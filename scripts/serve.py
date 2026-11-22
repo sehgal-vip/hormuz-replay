@@ -85,7 +85,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_header("Content-Type", self.guess_type(str(path)) + ("; charset=utf-8" if path.suffix != ".json" else ""))
             self.send_header("Content-Encoding", "gzip")
             self.send_header("Content-Length", str(len(data)))
-            self.send_header("Cache-Control", "public, max-age=300")
+            # Big, rarely changing files may be cached briefly; the page, script and styles are always rechecked.
+            static = "/data/" in self.path or "/vendor/" in self.path
+            self.send_header("Cache-Control", "public, max-age=300" if static else "no-cache")
             self.end_headers()
             self.wfile.write(data)
             return

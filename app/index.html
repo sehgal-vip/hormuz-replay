@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
 <link href="vendor/maplibre-gl.css" rel="stylesheet">
-<link href="style.css" rel="stylesheet">
+<link href="style.css?v=3" rel="stylesheet">
 </head>
 <body>
 <header class="top">
@@ -88,93 +88,90 @@
       <header class="panel-head insp-head"><span class="panel-title">Inspector</span><span class="panel-sub" id="inspSub"></span><button type="button" class="insp-close" id="inspClose" title="Close (Esc)">×</button></header>
       <div class="panel-body" id="inspBody"></div>
     </section>
-    <section class="panel" data-panel="dispatch">
-      <header class="panel-head"><span class="panel-title">Dispatch</span><span class="panel-sub" id="dispatchSub"></span><i class="chev"></i></header>
-      <div class="panel-body">
-        <article class="beat intro" id="introCard">
-          <div class="beat-head"><span class="lane-chip">Start here</span></div>
-          <p class="narrator">A replay of the Hormuz crisis, hour by hour, with every claim graded against the data.</p>
-          <ol class="intro-steps">
-            <li><b>Press play</b> (or Space). The clock stops at each claim; this panel shows the claim, the evidence and a grade.</li>
-            <li><b>Jump around:</b> click any dot on the timeline, or use the previous and next buttons.</li>
-            <li><b>Interrogate the map:</b> the line under the map reads out what is under the cursor; click any object for its details.</li>
-            <li><b>Ask a question</b> with the chat button at the bottom right of the map.</li>
-          </ol>
-          <div class="intro-grades">
-            <div><span class="grade corroborated"><b>Corroborated</b></span> independent data shows it</div>
-            <div><span class="grade consistent"><b>Consistent</b></span> data fits, cannot prove it</div>
-            <div><span class="grade reported"><b>Reported only</b></span> no data we hold can test it</div>
-            <div><span class="grade contested"><b>Contested</b></span> sources disagree</div>
-            <div><span class="grade contradicted"><b>Contradicted</b></span> data shows otherwise</div>
-          </div>
-        </article>
-        <article class="beat" id="beatCard">
-          <div class="beat-head">
-            <span class="lane-chip" id="beatLane">Claims</span>
-            <span class="precision" id="beatPrecision"></span>
-            <span class="beat-id" id="beatId"></span>
-          </div>
-          <p class="narrator" id="beatNarrator">Press play.</p>
-          <dl class="beat-body">
-            <dt>Claim</dt><dd id="beatClaim">—</dd>
-            <dt>Evidence</dt><dd id="beatEvidence">—</dd>
-          </dl>
+
+    <!-- Zone 1: the claim and its grade. Always in view; never scrolls away. -->
+    <section class="claim-zone">
+      <article class="beat intro" id="introCard">
+        <div class="beat-head"><span class="lane-chip">Start here</span></div>
+        <p class="narrator">A replay of the Hormuz crisis, hour by hour, with every claim graded against the data.</p>
+        <ol class="intro-steps">
+          <li><b>Press play</b> (or Space). The clock stops at each claim; this card shows the claim, its grade and the evidence.</li>
+          <li><b>Jump around:</b> click any dot on the timeline, or use the previous and next buttons.</li>
+          <li><b>Interrogate the map:</b> the line under the map reads out what is under the cursor; click any object for its details.</li>
+          <li><b>Ask a question</b> with the chat button at the bottom right of the map.</li>
+        </ol>
+        <div class="intro-grades">
+          <div><span class="grade corroborated"><b>Corroborated</b></span> independent data shows it</div>
+          <div><span class="grade consistent"><b>Consistent</b></span> data fits, cannot prove it</div>
+          <div><span class="grade reported"><b>Reported only</b></span> no data we hold can test it</div>
+          <div><span class="grade contested"><b>Contested</b></span> sources disagree</div>
+          <div><span class="grade contradicted"><b>Contradicted</b></span> data shows otherwise</div>
+        </div>
+      </article>
+      <article class="beat" id="beatCard">
+        <div class="beat-head">
+          <span class="lane-chip" id="beatLane">Claims</span>
+          <span class="precision" id="beatPrecision"></span>
+          <span class="beat-id" id="beatId"></span>
+        </div>
+        <div class="verdict">
           <div class="grade" id="beatGrade"></div>
-          <button class="ask-btn" id="askBtn" type="button">Why do you say that?</button>
-        </article>
-      </div>
-    </section>
-
-    <section class="panel" data-panel="air">
-      <header class="panel-head"><span class="panel-title">Airspace</span><span class="panel-sub">aircraft airborne this hour</span><i class="chev"></i></header>
-      <div class="panel-body">
-        <div class="stat">
-          <div class="stat-row"><span>Gulf states</span><b id="sGulf">–</b></div>
-          <div class="stat-row"><span>Interior Iran</span><b id="sIran">–</b></div>
-          <canvas class="spark" id="sparkAir"></canvas>
+          <span class="grade-note" id="beatGradeNote"></span>
         </div>
-      </div>
+        <p class="narrator" id="beatNarrator">Press play.</p>
+        <dl class="beat-body">
+          <dt>Claim</dt><dd id="beatClaim">—</dd>
+          <dt>Evidence</dt><dd id="beatEvidence">—</dd>
+        </dl>
+        <button class="ask-btn" id="askBtn" type="button">Why do you say that?</button>
+      </article>
     </section>
 
-    <section class="panel" data-panel="ships">
-      <header class="panel-head"><span class="panel-title">Ships</span><span class="panel-sub">broadcasting this hour (AIS)</span><i class="chev"></i></header>
-      <div class="panel-body">
-        <div class="stat">
-          <div class="stat-row"><span>Strait box</span><b id="sHormuz">–</b></div>
-          <div class="stat-row"><span>Gulf of Oman</span><b id="sGoo">–</b></div>
-          <canvas class="spark" id="sparkShips"></canvas>
+    <!-- Zone 2: supporting detail, one tab at a time. -->
+    <section class="tabs-zone">
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" class="tab" data-tab="day">That day <b id="dayCount"></b></button>
+        <button type="button" role="tab" class="tab" data-tab="numbers">Numbers</button>
+        <button type="button" role="tab" class="tab" data-tab="sats">Satellites</button>
+      </div>
+      <div class="tab-body" id="tabBody">
+        <div class="tab-pane" data-pane="day">
+          <p class="pane-note">Reports dated to this day with no known hour.</p>
+          <ul class="dayband" id="dayBand"></ul>
         </div>
-      </div>
-    </section>
-
-    <section class="panel" data-panel="crossings">
-      <header class="panel-head"><span class="panel-title">Crossings</span><span class="panel-sub">that day, by provider</span><i class="chev"></i></header>
-      <div class="panel-body">
-        <div class="stat">
-          <div class="stat-row"><span>IMF PortWatch</span><b id="sImf">–</b></div>
-          <div class="stat-row"><span>S&amp;P (via JMIC)</span><b id="sSp">–</b></div>
-          <div class="stat-row"><span>Windward</span><b id="sWw">–</b></div>
-          <canvas class="spark" id="sparkCross"></canvas>
+        <div class="tab-pane" data-pane="numbers" hidden>
+          <div class="stat">
+            <div class="stat-label">Aircraft airborne this hour</div>
+            <div class="stat-row"><span><i class="key k1"></i>Gulf states</span><b id="sGulf">–</b></div>
+            <div class="stat-row"><span><i class="key k2"></i>Interior Iran</span><b id="sIran">–</b></div>
+            <canvas class="spark" id="sparkAir"></canvas>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Ships broadcasting this hour (AIS)</div>
+            <div class="stat-row"><span><i class="key k2"></i>Strait box</span><b id="sHormuz">–</b></div>
+            <div class="stat-row"><span><i class="key k1"></i>Gulf of Oman</span><b id="sGoo">–</b></div>
+            <canvas class="spark" id="sparkShips"></canvas>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Strait crossings that day, by provider</div>
+            <div class="stat-row"><span><i class="key k1"></i>IMF PortWatch</span><b id="sImf">–</b></div>
+            <div class="stat-row"><span><i class="key k2"></i>S&amp;P (via JMIC)</span><b id="sSp">–</b></div>
+            <div class="stat-row"><span><i class="key k0"></i>Windward</span><b id="sWw">–</b></div>
+            <canvas class="spark" id="sparkCross"></canvas>
+          </div>
+          <p class="pane-note spark-note">Charts run 24 Feb to 16 Mar. The vertical line is the current hour.</p>
         </div>
-      </div>
-    </section>
-
-    <section class="panel" data-panel="sats">
-      <header class="panel-head"><span class="panel-title">Satellites</span><span class="panel-sub">radar and optical, last pass</span><i class="chev"></i></header>
-      <div class="panel-body">
-        <div class="stat">
-          <div class="stat-label">Radar ships in strait box, per open-sea unit</div>
-          <div id="radarRows"></div>
-          <div class="stat-label" style="margin-top:10px">Optical ships, Gulf and Gulf of Oman</div>
-          <div id="opticalRow"></div>
+        <div class="tab-pane" data-pane="sats" hidden>
+          <div class="stat">
+            <div class="stat-label">Radar ships in strait box, per open-sea unit</div>
+            <div id="radarRows"></div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Optical ships, Gulf and Gulf of Oman</div>
+            <div id="opticalRow"></div>
+          </div>
+          <p class="pane-note">Latest pass at or before the current hour, with its age. Older passes fade.</p>
         </div>
-      </div>
-    </section>
-
-    <section class="panel" data-panel="day">
-      <header class="panel-head"><span class="panel-title">That day</span><span class="panel-sub">date-only reports</span><i class="chev"></i></header>
-      <div class="panel-body">
-        <div class="stat"><ul class="dayband" id="dayBand"></ul></div>
       </div>
     </section>
   </aside>
@@ -188,17 +185,21 @@
         <button type="submit">Ask</button>
       </form>
     </section>
-    <button class="chat-fab" id="chatFab" type="button"><span class="fab-dot"></span>Ask the evidence</button>
+    <button class="chat-fab" id="chatFab" type="button" title="Ask the evidence" aria-label="Ask the evidence"></button>
   </div>
 </main>
 
 <footer class="timeline">
+  <div class="tl-key"><span>Claim grades:</span>
+    <span><i class="dot d-cor"></i>corroborated</span><span><i class="dot d-con"></i>consistent or contested</span>
+    <span><i class="dot d-rep"></i>reported only</span><span><i class="dot d-ctr"></i>contradicted</span>
+    <span><i class="dia"></i>context</span><span><i class="bar"></i>ship incident</span></div>
   <canvas id="lanes"></canvas>
 </footer>
 
 <div class="lane-tip" id="laneTip" hidden></div>
 <script src="vendor/maplibre-gl.js"></script>
 <script src="vendor/deck.min.js"></script>
-<script src="app.js"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>
