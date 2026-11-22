@@ -884,14 +884,15 @@
     }
     return 0;
   }
-  function satFrac(dt) {
-    if (satHourKey !== tick) { satHourKey = tick; satMin = playing ? 0 : midPassMin(tick); }
-    else if (playing) satMin = (satMin + Math.min(dt, 1) * SAT_MIN_PER_SEC) % 60;
+  function satFrac(dt, running) {
+    // running = the clock is actually advancing (not paused, and not held on a claim or a camera move)
+    if (satHourKey !== tick) { satHourKey = tick; satMin = running ? 0 : midPassMin(tick); }
+    else if (running) satMin = (satMin + Math.min(dt, 1) * SAT_MIN_PER_SEC) % 60;
     return satMin / 60;
   }
   function frame(now) {
     const dt = (now - lastFrame) / 1000; lastFrame = now;
-    updateSatellites(tick, satFrac(dt));
+    updateSatellites(tick, satFrac(dt, playing && now >= holdUntil));
     if (playing && now >= holdUntil) {
       // Time-based: advance as many ticks as the elapsed time covers (fast scenes need several per frame),
       // stopping at any tick that holds the clock (a beat or a camera move).
