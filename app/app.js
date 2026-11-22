@@ -871,17 +871,27 @@
   function setPlaying(p) { playing = p; $("playBtn").textContent = p ? "❚❚" : "▶"; lastFrame = performance.now(); }
 
   // Satellites run on their own loop inside the current hour (the story tick is one hour, D10):
-  // the hour's passes replay continuously at 3 minutes per second, so a 10-minute pass takes about 3 seconds,
-  // whether the story is playing or paused. Positions and hover times stay true to the minute shown.
+  // while the story plays, the hour's passes replay at 3 minutes per second, so a 10-minute pass takes about
+  // 3 seconds. On pause the loop freezes with everything else. Jumping to another hour while paused shows that
+  // hour's first pass at its midpoint, so a paused map still shows where the satellite was.
   const SAT_MIN_PER_SEC = 3;
-  let satHourKey = -1, satT0 = 0;
-  function satFrac(now) {
-    if (satHourKey !== tick) { satHourKey = tick; satT0 = now; }
-    return (((now - satT0) / 1000) * SAT_MIN_PER_SEC % 60) / 60;
+  let satHourKey = -1, satMin = 0;
+  function midPassMin(t) {
+    const h0 = t * 60, h1 = h0 + 60;
+    for (const sg of satSegs) {
+      const t0 = sg.ts[0], t1 = sg.ts[sg.ts.length - 1];
+      if (t0 < h1 && t1 > h0) return Math.max(0, Math.min(59.9, (Math.max(t0, h0) + Math.min(t1, h1)) / 2 - h0));
+    }
+    return 0;
+  }
+  function satFrac(dt) {
+    if (satHourKey !== tick) { satHourKey = tick; satMin = playing ? 0 : midPassMin(tick); }
+    else if (playing) satMin = (satMin + Math.min(dt, 1) * SAT_MIN_PER_SEC) % 60;
+    return satMin / 60;
   }
   function frame(now) {
     const dt = (now - lastFrame) / 1000; lastFrame = now;
-    updateSatellites(tick, satFrac(now));
+    updateSatellites(tick, satFrac(dt));
     if (playing && now >= holdUntil) {
       // Time-based: advance as many ticks as the elapsed time covers (fast scenes need several per frame),
       // stopping at any tick that holds the clock (a beat or a camera move).
