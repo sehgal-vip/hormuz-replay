@@ -1,4 +1,4 @@
-/* Who closed the strait? Replay on a uniform 1-hour clock. */
+/* What the Hormuz Replay on a uniform 1-hour clock. */
 (async function () {
   // Load everything small in parallel; flights (the largest file) load in the background so the page never waits on it.
   let FL = {};

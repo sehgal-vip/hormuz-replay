@@ -1,4 +1,4 @@
-# Who closed the strait? Demo script
+# What the Hormuz Demo script
 
 **Runtime:** about 2 minutes 30 seconds. Optional inserts add a minute.
 **Reading it:** lines in quotes are spoken. Lines in square brackets are what you do on screen. Times are a guide, not a stopwatch.

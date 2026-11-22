@@ -1,4 +1,4 @@
-# Who closed the strait?
+# What the Hormuz
 
 A replay of the Strait of Hormuz crisis (24 Feb to 16 Mar 2026) on a one-hour clock. Flights, ship density, radar and optical ship detections, satellite passes, airspace and official incident reports appear only from the hour they existed. Each claim carries a grade (corroborated, consistent, reported only, contested, contradicted) and names its data file. Plain code counts and detects; the grades are set from that evidence, and a local model explains them and answers questions from the same evidence.
 

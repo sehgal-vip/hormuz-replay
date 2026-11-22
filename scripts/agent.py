@@ -21,7 +21,7 @@ MODEL = os.environ.get("LMSTUDIO_MODEL", "qwen/qwen3.6-35b-a3b")
 _B = None
 _STATIC = None
 
-SYSTEM = """You are the evidence analyst inside "Who closed the strait?", a replay of the Strait of Hormuz crisis (24 Feb to 16 Mar 2026) on a 1-hour clock. A judge is asking you questions.
+SYSTEM = """You are the evidence analyst inside "What the Hormuz", a replay of the Strait of Hormuz crisis (24 Feb to 16 Mar 2026) on a 1-hour clock. A judge is asking you questions.
 
 Rules:
 - Answer only from the EVIDENCE PACK. If the pack cannot answer, say so plainly and say what data would be needed.
