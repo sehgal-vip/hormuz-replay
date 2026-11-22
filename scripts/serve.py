@@ -3,6 +3,7 @@
 # dependencies = []
 # ///
 """Serve the replay app on http://localhost:8770 (static files plus /api/ask)."""
+import gzip
 import http.server
 import json
 import os
@@ -18,6 +19,7 @@ APP = ROOT / "app"
 # Extra hostnames allowed when the app is exposed through a tunnel, e.g. PUBLIC_HOSTS=abc.ngrok-free.app
 PUBLIC_HOSTS = {h.strip() for h in os.environ.get("PUBLIC_HOSTS", "").split(",") if h.strip()}
 ASK_LOG = {}
+GZ = {}
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -71,6 +73,22 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         if not self._local():
             return self.send_error(403)
+        # Compress text files for slow links (the flights file is 11 MB raw); cached after the first use.
+        path = pathlib.Path(self.translate_path(self.path))
+        if ("gzip" in (self.headers.get("Accept-Encoding") or "") and path.is_file()
+                and path.suffix in (".json", ".js", ".css", ".html")):
+            key = (str(path), path.stat().st_mtime)
+            if key not in GZ:
+                GZ[key] = gzip.compress(path.read_bytes(), 6)
+            data = GZ[key]
+            self.send_response(200)
+            self.send_header("Content-Type", self.guess_type(str(path)) + ("; charset=utf-8" if path.suffix != ".json" else ""))
+            self.send_header("Content-Encoding", "gzip")
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Cache-Control", "public, max-age=300")
+            self.end_headers()
+            self.wfile.write(data)
+            return
         super().do_GET()
 
     def do_HEAD(self):

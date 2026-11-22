@@ -1,11 +1,18 @@
 /* Who closed the strait? Replay on a uniform 1-hour clock. */
 (async function () {
-  const B = await (await fetch("data/bundle.json")).json();
-  const FL = await (await fetch("data/flights.json")).json();
-  const SD = await fetch("data/ship_density.json").then((r) => (r.ok ? r.json() : { days: {} })).catch(() => ({ days: {} }));
-  const ST = await fetch("data/sat_tracks.json").then((r) => (r.ok ? r.json() : { sats: [] })).catch(() => ({ sats: [] }));
+  // Load everything small in parallel; flights (the largest file) load in the background so the page never waits on it.
+  let FL = {};
+  const [B, SD, ST, AIR] = await Promise.all([
+    fetch("data/bundle.json").then((r) => r.json()),
+    fetch("data/ship_density.json").then((r) => (r.ok ? r.json() : { days: {} })).catch(() => ({ days: {} })),
+    fetch("data/sat_tracks.json").then((r) => (r.ok ? r.json() : { sats: [] })).catch(() => ({ sats: [] })),
+    fetch("data/airspace.json").then((r) => (r.ok ? r.json() : { firs: [] })).catch(() => ({ firs: [] })),
+  ]);
+  fetch("data/flights.json").then((r) => r.json()).then((j) => {
+    FL = j;
+    if (window.__replay) window.__replay.seek(window.__replay.tick);  // redraw with aircraft
+  }).catch(() => {});
   const SAT_SHOWN = ST.sats.filter((x) => x.validated);
-  const AIR = await fetch("data/airspace.json").then((r) => (r.ok ? r.json() : { firs: [] })).catch(() => ({ firs: [] }));
   const NT = B.nTicks;
   const T0 = Date.parse(B.t0);
   const GOLD = "#c8a24a", IVORY = "#ece7da", MUTED = "#8d96a3", INK2 = "#1a212c", INK3 = "#2a3340";
